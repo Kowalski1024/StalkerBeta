@@ -3,7 +3,8 @@ import random
 from math import pi
 
 import numpy as np
-from typing import List, Union
+from typing import List, Union, Set
+import itertools as it
 
 from Cython.Includes import numpy
 from loguru import logger
@@ -16,22 +17,28 @@ from sc2.units import Units
 pi2 = 2 * math.pi
 
 
-def points_on_circumference(center: Point2, radius, n=10) -> List[Point2]:
+def points_on_circumference(center: Point2, radius, n=10) -> Set[Point2]:
     """Calculates all points on the circumference of a circle. n = number of points."""
     points = [
         (center.x + (math.cos(2 * pi / n * x) * radius), center.y + (math.sin(2 * pi / n * x) * radius))  # x  # y
         for x in range(0, n)
     ]
-    point2list = list(map(lambda t: Point2(t), points))
+    point2list = set(map(lambda t: Point2(t), points))
     return point2list
 
 
-def points_in_circle_np(radius):
-    a = np.arange(radius + 1)
-    res = set()
-    for x, y in zip(*np.where(a[:, np.newaxis] ** 2 + a ** 2 <= radius ** 2)):
-        res.update({(x, y), (x, -y), (-x, y), (-x, -y)})
-    return res
+def points_in_square_np(radius, center: Union[tuple, Point2], shape):
+    mat = np.empty(shape, dtype=bool)
+
+    print(mat)
+    return mat
+    # return np.nonzero(circle <= radius ** 2)
+
+
+def points_in_circle_np(radius, center: Union[tuple, Point2], shape):
+    xx, yy = np.ogrid[:shape[0], :shape[1]]
+    circle = (xx - center[1]) ** 2 + (yy - center[0]) ** 2
+    return np.nonzero(circle <= radius ** 2)
 
 
 def facing_region(shape, matrix, my_units, to_position, dis: int = 4, num: int = 128, add: bool = False,

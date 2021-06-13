@@ -18,7 +18,7 @@ class Region:
 
     def find_best_position(self, size: int) -> Point2:
         pos, = sc2_math.max_sub_matrix(self.region, size=size)
-        return Point2((pos[3], pos[1]))
+        return Point2((pos[3]+self.shape()[1], pos[1]+self.shape()[0]))
 
     def slice_region(self, dim: float, center_position):
         new_region = copy(self)
