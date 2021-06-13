@@ -2,6 +2,7 @@ import math
 import random
 from math import pi
 
+import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Union, Set
 import itertools as it
@@ -28,15 +29,17 @@ def points_on_circumference(center: Point2, radius, n=10) -> Set[Point2]:
 
 
 def points_in_square_np(radius, center: Union[tuple, Point2], shape):
-    mat = np.empty(shape, dtype=bool)
-
-    print(mat)
-    return mat
-    # return np.nonzero(circle <= radius ** 2)
+    square = np.zeros(shape=shape)
+    x_start, y_start = center[1] - radius, center[0] - radius
+    x_start = 0 if x_start < 0 else x_start
+    y_start = 0 if y_start < 0 else y_start
+    square[int(x_start):int(center[1] + radius), int(y_start):int(center[0] + radius)] = 1
+    return np.nonzero(square)
 
 
 def points_in_circle_np(radius, center: Union[tuple, Point2], shape):
     xx, yy = np.ogrid[:shape[0], :shape[1]]
+    print(xx, yy)
     circle = (xx - center[1]) ** 2 + (yy - center[0]) ** 2
     return np.nonzero(circle <= radius ** 2)
 

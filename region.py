@@ -1,13 +1,11 @@
 import matplotlib.pyplot as plt
 from sc2.unit import Unit
-from sc2.position import Point2, Point3
+from sc2.position import Point2
 
 from copy import copy
 from typing import Union
 import numpy as np
 import sc2_math
-
-_debug = False
 
 
 class Region:
@@ -39,15 +37,33 @@ class Region:
         pass
 
     def add_weight(self, weight: int, position: Union[Point2, tuple], radius: int, cycle: bool = False):
-        for x in range(round(position[0] - radius), round(position[0] + radius)):
-            for y in range(round(position[1] - radius), round(position[1] + radius)):
-                self.region[y][x] += weight
-        pass
+        """
+        :param weight:
+        :param position: Point2 or tuple
+        :param radius:
+        :param cycle:
+        """
+        if cycle:
+            self.region[sc2_math.points_in_circle_np(radius, position, self.shape())] += weight
+        else:
+            self.region[sc2_math.points_in_square_np(radius, position, self.shape())] += weight
 
     def set_weight(self, weight: int, position: Union[Point2, tuple], radius: int, cycle: bool = False):
-        pass
+        """
+        :param weight:
+        :param position: Point2 or tuple
+        :param radius:
+        :param cycle:
+        """
+        if cycle:
+            self.region[sc2_math.points_in_circle_np(radius, position, self.shape())] = weight
+        else:
+            self.region[sc2_math.points_in_square_np(radius, position, self.shape())] = weight
 
     def shape(self) -> tuple:
+        """
+        :return: return shape of the region
+        """
         return self.region.shape
 
     def draw_region(self):
