@@ -11,6 +11,7 @@
     <option name="namespacePackageFolders">
       <list>
         <option value="$MODULE_DIR$/SC2 Burny" />
+        <option value="$MODULE_DIR$/MapInfluence" />
       </list>
     </option>
   </component>

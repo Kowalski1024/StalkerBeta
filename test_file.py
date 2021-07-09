@@ -1,10 +1,8 @@
-from region import Region
-import matplotlib.pyplot as plt
-import sc2_math
-import numpy as np
+from MapInfluence.region import Region
 
 reg = Region(shape=(10, 10), value_type=int)
-print(sc2_math.points_in_square_np(1, (2,2), (10,10)))
+reg.add_weight_set(5, {(1,2), (3,2)})
+reg.draw_region()
 
 # print(mat)
 # reg.region[np.nonzero(mat)] = 2
