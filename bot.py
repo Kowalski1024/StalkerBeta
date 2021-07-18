@@ -3,19 +3,29 @@ from sc2.constants import *
 from sc2 import Race
 from sc2.player import Bot, Computer, Difficulty
 from sc2.unit import Unit
+from MapAnalyzer.MapData import MapData
+import sc2_math
+
+from Managers.influence_gird_manager import InfluenceGridManager
+from MapInfluence.grid_types import GridTypes
 
 
-class TossBot(Commander):
+class TossBot(sc2.BotAI):
     def __init__(self):
         super().__init__()
+        self.iteration = int
+        self.map_data = MapData
+        self.gridManager = InfluenceGridManager(self)
 
     async def on_unit_destroyed(self, unit_tag):
         pass
 
     async def on_building_construction_started(self, unit: Unit):
+        await self.gridManager.on_building_construction_started(unit)
         pass
 
     async def on_building_construction_complete(self, unit: Unit):
+        await self.gridManager.on_building_construction_complete(unit)
         pass
 
     async def on_before_start(self):
@@ -27,14 +37,24 @@ class TossBot(Commander):
                     mf = mfs.closest_to(worker)
                     worker.gather(mf)
                     mfs.remove(mf)
-        await self.builder.train_probe()
 
     async def on_start(self):
+        self.map_data = MapData(self)
+        print(self.main_base_ramp.protoss_wall_pylon)
+        self.gridManager.on_create(self.map_data)
         print("Game started")
+        self.gridManager.get_building_grid().show_grid()
 
     async def on_step(self, iteration):
         self.iteration = iteration
         await self.distribute_workers(resource_ratio=2)
+        # if self.iteration % 10 == 0:
+        #     if self.can_afford(UnitTypeId.PYLON):
+        #         reg = (self.gridManager[GridTypes.Pylons] + self.gridManager[GridTypes.Placement] - self.gridManager[GridTypes.Power]) & self.gridManager[GridTypes.Buildings]
+        #         target_pos = sc2_math.find_best_position(reg.grid, 2)
+        #         print(target_pos)
+        #         worker = self.select_build_worker(target_pos)
+        #         worker.build(UnitTypeId.PYLON, target_pos)
         pass
 
     def on_end(self, result):

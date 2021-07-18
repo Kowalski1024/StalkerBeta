@@ -13,7 +13,7 @@ from sc2.position import Point2
 from sc2.unit import Unit
 from sc2.units import Units
 
-# https://github.com/DrInfy/sharpy-sc2/blob/develop/sharpy/sc2math.py
+# Some functions copied from https://github.com/DrInfy/sharpy-sc2/blob/develop/sharpy/sc2math.py
 
 pi2 = 2 * math.pi
 
@@ -39,7 +39,6 @@ def points_in_square_np(radius, center: Union[tuple, Point2], shape):
 
 def points_in_circle_np(radius, center: Union[tuple, Point2], shape):
     xx, yy = np.ogrid[:shape[0], :shape[1]]
-    print(xx, yy)
     circle = (xx - center[1]) ** 2 + (yy - center[0]) ** 2
     return np.nonzero(circle <= radius ** 2)
 
@@ -105,8 +104,8 @@ def max_sub_matrix(matrix_in: np.ndarray, size: int = 0):
     pos = [0, 0, 0, 0]
     pos_list = list()
     matrix_size = matrix_in.shape
-    matrix = np.full(matrix_size, -255)
-    matrix += matrix_in
+    matrix = np.copy(matrix_in)
+    matrix[matrix == 0] = -255
     if size == 0:
         # Kadane algorithm
         for left in range(matrix_size[0]):
@@ -148,3 +147,14 @@ def max_sub_matrix(matrix_in: np.ndarray, size: int = 0):
     if pos_list:
         pos = random.choice(pos_list)
     return [pos, max_sum]
+
+
+def find_best_position(matrix, size: int = 1):
+    """
+    :param matrix:
+    :param size:
+    :return:
+    """
+    pos = max_sub_matrix(matrix, size)[0]
+    return Point2((pos[3], pos[1]))
+    pass
