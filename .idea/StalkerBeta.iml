@@ -12,6 +12,7 @@
       <list>
         <option value="$MODULE_DIR$/SC2 Burny" />
         <option value="$MODULE_DIR$/MapInfluence" />
+        <option value="$MODULE_DIR$/BuildOrder" />
       </list>
     </option>
   </component>

@@ -6,6 +6,7 @@ from sc2.unit import Unit
 from MapAnalyzer.MapData import MapData
 import sc2_math
 
+from Managers.build_order_manager import BuildOrderManager
 from Managers.influence_gird_manager import InfluenceGridManager
 from MapInfluence.grid_types import GridTypes
 
@@ -16,6 +17,7 @@ class TossBot(sc2.BotAI):
         self.iteration = int
         self.map_data = MapData
         self.gridManager = InfluenceGridManager(self)
+        self.buildManager = BuildOrderManager(self)
 
     async def on_unit_destroyed(self, unit_tag):
         pass
@@ -42,12 +44,13 @@ class TossBot(sc2.BotAI):
         self.map_data = MapData(self)
         print(self.main_base_ramp.protoss_wall_pylon)
         self.gridManager.on_create(self.map_data)
+        self.buildManager.on_create()
         print("Game started")
-        self.gridManager.get_building_grid().show_grid()
 
     async def on_step(self, iteration):
         self.iteration = iteration
         await self.distribute_workers(resource_ratio=2)
+        await self.buildManager.update()
         # if self.iteration % 10 == 0:
         #     if self.can_afford(UnitTypeId.PYLON):
         #         reg = (self.gridManager[GridTypes.Pylons] + self.gridManager[GridTypes.Placement] - self.gridManager[GridTypes.Power]) & self.gridManager[GridTypes.Buildings]
@@ -55,6 +58,7 @@ class TossBot(sc2.BotAI):
         #         print(target_pos)
         #         worker = self.select_build_worker(target_pos)
         #         worker.build(UnitTypeId.PYLON, target_pos)
+        await self.buildManager.post_update()
         pass
 
     def on_end(self, result):
