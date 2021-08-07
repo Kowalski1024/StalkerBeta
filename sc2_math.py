@@ -94,67 +94,43 @@ def facing_region(shape, matrix, my_units, to_position, dis: int = 4, num: int =
             region(u.position_tuple)
 
 
-def max_sub_matrix(matrix_in: np.ndarray, size: int = 0):
+def find_building_position(matrix: np.ndarray, size: int = 0, min_value: int = 0):
     """
-    :param matrix_in:
-    :param size:
-    :return [(y_start, y_end, x_start, x_end), max_sum]:
-    """
-    max_sum = 0
-    pos = [0, 0, 0, 0]
-    pos_list = list()
-    matrix_size = matrix_in.shape
-    matrix = np.copy(matrix_in)
-    matrix[matrix == 0] = -255
-    if size == 0:
-        # Kadane algorithm
-        for left in range(matrix_size[0]):
-            for right in range(left, matrix_size[0]):
-                sub_matrix = matrix[:matrix_size[1] + 1, left:right + 1]
-                side_array = np.sum(sub_matrix, axis=1)
-                sum_arr = 0
-                start = 0
-                end = 0
-                while end < side_array.shape[0]:
-                    sum_arr += side_array[end]
-                    if sum_arr < 0:
-                        sum_arr = 0
-                        start = end + 1
-                    elif sum_arr > max_sum:
-                        max_sum = sum_arr
-                        pos = [start, end, left, right]
-                    elif (
-                            sum_arr == max_sum
-                            and size > 1
-                            and (pos[1] - pos[0]) * (pos[3] - pos[2]) < (right - left) * (end - start)
-                    ):
-                        max_sum = sum_arr
-                        pos = [start, end, left, right]
-                    end += 1
-    else:
-        size -= 1
-        for x in range(matrix_size[0] - size):
-            for y in range(matrix_size[1] - size):
-                sub_matrix = matrix[x:(x + size + 1), y:(y + size + 1)]
-                sum_arr = np.sum(sub_matrix)
-                if sum_arr >= 0:
-                    if sum_arr > max_sum:
-                        pos_list.clear()
-                        max_sum = sum_arr
-                        pos_list.append([x, x + size, y, y + size])
-                    elif sum_arr == max_sum:
-                        pos_list.append([x, x + size, y, y + size])
-    if pos_list:
-        pos = random.choice(pos_list)
-    return [pos, max_sum]
-
-
-def find_best_position(matrix, size: int = 1):
-    """
+    :param min_value:
     :param matrix:
     :param size:
-    :return:
     """
-    pos = max_sub_matrix(matrix, size)[0]
-    return Point2((pos[3], pos[1]))
-    pass
+    # TODO: sum the squares in matrix before searching
+    # https://www.techiedelight.com/find-maximum-sum-submatrix-in-given-matrix/
+
+    max_sum = 0
+    pos_list = list()
+    nonzero = np.nonzero(matrix)
+    x_axis = nonzero[0]
+    y_axis = nonzero[1]
+    for x, y in zip(x_axis, y_axis):
+        square_sum = np.sum(matrix[x:(x + size), y:(y + size)])
+        if square_sum > min_value:
+            if square_sum > max_sum:
+                pos_list.clear()
+                max_sum = square_sum
+                pos_list.append((x-1, y-1))
+            elif square_sum == max_sum:
+                pos_list.append((x-1, y-1))
+    if pos_list:
+        pos = random.choice(pos_list)
+    else:
+        return None
+    return Point2((pos[1]+(size+1)/2, pos[0]+(size+1)/2))
+
+
+# def find_best_position(matrix, size: int = 1):
+#     """
+#     :param matrix:
+#     :param size:
+#     :return:
+#     """
+#     pos = max_square_in_matrix(matrix, size)
+#     if pos is None:
+#         return None
+#     return Point2((pos[3], pos[1]))

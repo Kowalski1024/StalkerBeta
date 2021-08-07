@@ -2,7 +2,7 @@ from MapInfluence.influence_grid import InfluenceGrid
 
 from sc2.bot_ai import BotAI
 from sc2.unit import Unit
-from sc2.constants import *
+from my_constants import *
 
 
 class PlacementGrid(InfluenceGrid):
@@ -22,11 +22,17 @@ class PowerGrid(InfluenceGrid):
         pass
 
     def on_unit_destroyed(self, unit: Unit):
-        self.add_weight(-1, unit.position_tuple, 6.5, True)
+        if unit.type_id == UnitTypeId.PYLON:
+            self.add_weight(-1, unit.position_tuple, radius=6.5, cycle=True)
+        elif unit.type_id in POWERED_STRUCTURES:
+            self.add_weight(0.1, unit.position_tuple, radius=6.5, cycle=True)
         pass
 
     def on_unit_created(self, unit: Unit):
-        self.add_weight(1, unit.position_tuple, 6.5, True)
+        if unit.type_id == UnitTypeId.PYLON:
+            self.add_weight(1, unit.position_tuple, radius=6.5, cycle=True)
+        elif unit.type_id in POWERED_STRUCTURES:
+            self.add_weight(-0.1, unit.position_tuple, radius=6.5, cycle=True)
         pass
 
 

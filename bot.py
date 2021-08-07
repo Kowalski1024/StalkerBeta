@@ -11,19 +11,20 @@ from Managers.influence_gird_manager import InfluenceGridManager
 from MapInfluence.grid_types import GridTypes
 
 
-class TossBot(sc2.BotAI):
+class BotBrain(sc2.BotAI):
     def __init__(self):
         super().__init__()
         self.iteration = int
         self.map_data = MapData
         self.gridManager = InfluenceGridManager(self)
-        self.buildManager = BuildOrderManager(self)
+        self.buildManager = BuildOrderManager(self, self.gridManager)
 
     async def on_unit_destroyed(self, unit_tag):
         pass
 
     async def on_building_construction_started(self, unit: Unit):
         await self.gridManager.on_building_construction_started(unit)
+        await self.buildManager.on_building_construction_started(unit)
         pass
 
     async def on_building_construction_complete(self, unit: Unit):
@@ -42,12 +43,12 @@ class TossBot(sc2.BotAI):
 
     async def on_start(self):
         self.map_data = MapData(self)
-        print(self.main_base_ramp.protoss_wall_pylon)
         self.gridManager.on_create(self.map_data)
         self.buildManager.on_create()
         print("Game started")
 
     async def on_step(self, iteration):
+        # print(self.step_time)
         self.iteration = iteration
         await self.distribute_workers(resource_ratio=2)
         await self.buildManager.update()
@@ -69,9 +70,9 @@ def main():
     # "AcropolisLE"
     # VeryEasy, Easy, Medium, MediumHard, Hard, Harder, VeryHard, CheatVision, CheatMoney, CheatInsane
     sc2.run_game(sc2.maps.get("AcropolisLE"), [
-        Bot(Race.Protoss, TossBot()),
+        Bot(Race.Protoss, BotBrain()),
         Computer(Race.Protoss, Difficulty.VeryEasy),
-    ], realtime=True, disable_fog=False)
+    ], realtime=True, disable_fog=False, )
 
 
 if __name__ == '__main__':

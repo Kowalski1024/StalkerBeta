@@ -51,7 +51,7 @@ class InfluenceGrid:
         return empty
 
     def find_best_position(self, size: int) -> Point2:
-        pos, = sc2_math.max_sub_matrix(self.grid, size=size)
+        pos, = sc2_math.find_building_position(self.grid, size=size)
         return Point2((pos[3] + self.shape()[1], pos[1] + self.shape()[0]))
 
     def slice_grid(self, dim: float, center_position):
@@ -72,15 +72,15 @@ class InfluenceGrid:
         return new_region
         pass
 
-    def add_points_with_weight(self, weight: int, points):
+    def add_points_with_weight(self, weight: Union[int, float], points):
         for point in points:
             self.grid[point[1], point[0]] += weight
 
-    def set_points_with_weight(self, weight: int, points):
+    def set_points_with_weight(self, weight: Union[int, float], points):
         for point in points:
             self.grid[point[1], point[0]] = weight
 
-    def add_weight(self, weight: int, position: Union[Point2, tuple], radius: float, cycle: bool = False):
+    def add_weight(self, weight: Union[int, float], position: Union[Point2, tuple], radius: float, cycle: bool = False):
         """
         :param weight:
         :param position: Point2 or tuple
@@ -92,7 +92,7 @@ class InfluenceGrid:
         else:
             self.grid[sc2_math.points_in_square_np(radius, position, self.shape())] += weight
 
-    def set_weight(self, weight: int, position: Union[Point2, tuple], radius: float, cycle: bool = False):
+    def set_weight(self, weight: Union[int, float], position: Union[Point2, tuple], radius: float, cycle: bool = False):
         """
         :param weight:
         :param position: Point2 or tuple

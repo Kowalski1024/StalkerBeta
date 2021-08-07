@@ -7,7 +7,7 @@ from sc2.unit import Unit
 
 class PylonsGrid(InfluenceGrid):
     def __init__(self, shape: tuple):
-        super().__init__(shape)
+        super().__init__(shape, value_type=float)
 
     def on_create(self, bot: BotAI, map_data: MapData = None):
         point = bot.main_base_ramp.protoss_wall_pylon
@@ -16,6 +16,25 @@ class PylonsGrid(InfluenceGrid):
         if map_data is not None:
             points = map_data.where_all(bot.townhalls[0].position)[0].buildables.points
             self.add_points_with_weight(10, points)
+        pass
+
+    def on_unit_destroyed(self, unit):
+        pass
+
+    def on_unit_created(self, unit):
+        pass
+
+
+class StructuresGrid(InfluenceGrid):
+    def __init__(self, shape: tuple):
+        super().__init__(shape)
+
+    def on_create(self, bot: BotAI, map_data: MapData = None):
+        points = bot.main_base_ramp.protoss_wall_buildings
+        if points:
+            print(points)
+            for point in points:
+                self.add_weight(weight=2, position=point, radius=1.5)
         pass
 
     def on_unit_destroyed(self, unit):

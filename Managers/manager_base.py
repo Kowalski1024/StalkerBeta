@@ -3,11 +3,11 @@ from typing import TYPE_CHECKING
 from abc import ABC, abstractmethod
 
 if TYPE_CHECKING:
-    from sc2.bot_ai import BotAI
+    from bot import BotBrain
 
 
 class ManagerBase:
-    _bot: "BotAI"
+    _bot: "BotBrain"
 
     def __init__(self):
         self._debug = False
