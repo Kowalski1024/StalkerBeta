@@ -1,6 +1,5 @@
 from .manager_base import ManagerBase
 from BuildOrder.build_task import BuildTask
-from BuildOrder.builder import Builder
 from Managers.influence_gird_manager import InfluenceGridManager
 
 import sc2_math

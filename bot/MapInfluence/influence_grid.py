@@ -3,8 +3,7 @@ from sc2.unit import Unit
 from sc2.position import Point2
 
 from copy import copy
-from abc import abstractmethod
-from typing import Union, Set
+from typing import Union
 import numpy as np
 import sc2_math
 

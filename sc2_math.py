@@ -1,13 +1,9 @@
 import math
 import random
 from math import pi
-
-import matplotlib.pyplot as plt
 import numpy as np
-from typing import List, Union, Set
-import itertools as it
+from typing import List, Union, Set, Tuple
 
-from Cython.Includes import numpy
 from loguru import logger
 from sc2.position import Point2
 from sc2.unit import Unit
@@ -16,6 +12,73 @@ from sc2.units import Units
 # Some functions copied from https://github.com/DrInfy/sharpy-sc2/blob/develop/sharpy/sc2math.py
 
 pi2 = 2 * math.pi
+
+
+class Segment:
+    def __init__(self, p1: tuple, p2: tuple):
+        self.p1 = p1
+        self.p2 = p2
+        self.vector = (p2[0] - p1[0], p2[1] - p1[1])
+
+    def __repr__(self) -> str:
+        return f"Segment({self.p1}, {self.p2})"
+
+    def intersection(self, other) -> list:
+        if isinstance(other, Segment):
+            det = (-other.vector[0] * self.vector[1] + self.vector[0] * other.vector[1])
+            if det == 0:
+                return []
+            s, t = self._get_parameters(other, det)
+            if 0 <= s <= 1 and 0 <= t <= 1:
+                return [(self.p1[0] + (t * self.vector[0]), self.p1[1] + (t * self.vector[1]))]
+        elif isinstance(other, LinearRing):
+            return other.intersection(self)
+        return []
+
+    def intersects(self, other) -> bool:
+        if isinstance(other, Segment):
+            det = (-other.vector[0] * self.vector[1] + self.vector[0] * other.vector[1])
+            if det == 0:
+                return False
+            s, t = self._get_parameters(other, det)
+            if 0 <= s <= 1 and 0 <= t <= 1:
+                return True
+        elif isinstance(other, LinearRing):
+            return other.intersects(self)
+        else:
+            raise KeyError('Only implemented intersection of other Segment or LinearRing')
+        return False
+
+    def _get_parameters(self, other, det):
+        s = (-self.vector[1] * (self.p1[0] - other.p1[0]) + self.vector[0] * (self.p1[1] - other.p1[1])) / det
+        t = (other.vector[0] * (self.p1[1] - other.p1[1]) - other.vector[1] * (self.p1[0] - other.p1[0])) / det
+        return s, t
+
+
+class LinearRing:
+    def __init__(self, vertices: List[tuple]):
+        self.vertices = vertices
+        ver = vertices.copy()
+        ver.append(ver.pop(0))
+        self.segment_list: List[Segment] = [Segment(p1, p2) for p1, p2 in zip(vertices, ver)]
+
+    def intersects(self, other: Segment) -> bool:
+        if isinstance(other, Segment):
+            for segment in self.segment_list:
+                if segment.intersects(other):
+                    return True
+        else:
+            raise KeyError('Only implemented Segment intersection')
+        return False
+
+    def intersection(self, other: Segment) -> list:
+        intersection_list = list()
+        if isinstance(other, Segment):
+            for segment in self.segment_list:
+                intersection_list.extend(segment.intersection(other))
+        else:
+            raise KeyError('Only implemented Segment intersection')
+        return intersection_list
 
 
 def points_on_circumference(center: Point2, radius, n=10) -> Set[Point2]:
@@ -114,14 +177,14 @@ def find_building_position(matrix: np.ndarray, size: int = 0, min_value: int = 0
             if square_sum > max_sum:
                 pos_list.clear()
                 max_sum = square_sum
-                pos_list.append((x-1, y-1))
+                pos_list.append((x - 1, y - 1))
             elif square_sum == max_sum:
-                pos_list.append((x-1, y-1))
+                pos_list.append((x - 1, y - 1))
     if pos_list:
         pos = random.choice(pos_list)
     else:
         return None
-    return Point2((pos[1]+(size+1)/2, pos[0]+(size+1)/2))
+    return Point2((pos[1] + (size + 1) / 2, pos[0] + (size + 1) / 2))
 
 
 # def find_best_position(matrix, size: int = 1):
