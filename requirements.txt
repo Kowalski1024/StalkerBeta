@@ -6,3 +6,7 @@ numpy~=1.19.3
 scipy~=1.7.1
 mpyq==0.2.5
 matplotlib~=3.4.3
+scikit-image~=0.18.2
+loguru~=0.5.3
+six~=1.16.0
+tqdm~=4.62.1

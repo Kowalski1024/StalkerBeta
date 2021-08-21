@@ -1,8 +1,6 @@
 from .manager_base import ManagerBase
-from MapInfluence.grid_types import GridTypes
-from MapInfluence.influence_grid import InfluenceGrid
-from MapInfluence.basic_grids import PlacementGrid, PowerGrid, BuildingGrid, NaturalGrid
-from MapInfluence.advanced_grids import PylonsGrid, StructuresGrid
+from .MapInfluence import GridTypes, InfluenceGrid, PlacementGrid, PowerGrid, BuildingGrid, NaturalGrid, PylonsGrid, \
+    StructuresGrid
 
 from sc2.unit import Unit
 from sc2.constants import *
@@ -11,6 +9,7 @@ from typing import Dict, TYPE_CHECKING
 from MapAnalyzer.MapData import MapData
 
 import timeit
+
 
 
 class InfluenceGridManager(ManagerBase):
@@ -68,7 +67,7 @@ class InfluenceGridManager(ManagerBase):
     def get_pylon_grid(self) -> InfluenceGrid:
         output_grid = (self.grid_dict[GridTypes.Pylons] + self.grid_dict[GridTypes.Placement] - self.grid_dict[
             GridTypes.Power]) & self.grid_dict[GridTypes.Buildings] & self.grid_dict[
-                   GridTypes.Natural]
+                          GridTypes.Natural]
         # town_halls without pylon
         pylons = self._bot.structures(UnitTypeId.PYLON)
         town_halls = self._bot.structures(UnitTypeId.NEXUS)
@@ -81,4 +80,4 @@ class InfluenceGridManager(ManagerBase):
     def get_building_grid(self) -> InfluenceGrid:
         return ((self.grid_dict[GridTypes.Structures] + self.grid_dict[GridTypes.Power]) & self.grid_dict[
             GridTypes.Power] & self.grid_dict[GridTypes.Buildings] & self.grid_dict[
-                   GridTypes.Natural] & self.grid_dict[GridTypes.Placement]) + self.grid_dict[GridTypes.Placement]
+                    GridTypes.Natural] & self.grid_dict[GridTypes.Placement]) + self.grid_dict[GridTypes.Placement]

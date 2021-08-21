@@ -26,7 +26,7 @@ class Townhall:
             self.resource = resource
             self.workers_tag = set()
             self.gather_point, self.return_point = points
-            self.mid_distance = self.gather_point.distance_to(self.return_point) / 1.2
+            self.mid_distance = self.gather_point.distance_to(self.return_point)/1.2
             self.worker_amount = 0
 
         def add(self, unit: Unit):

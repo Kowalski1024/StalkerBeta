@@ -1,4 +1,4 @@
-from MapInfluence.influence_grid import InfluenceGrid
+from .influence_grid import InfluenceGrid
 
 from MapAnalyzer.MapData import MapData
 from sc2.bot_ai import BotAI

@@ -81,6 +81,17 @@ class LinearRing:
         return intersection_list
 
 
+def rotation_matrix(degrees):
+    theta = np.radians(degrees)
+
+    return np.array(((np.cos(theta), -np.sin(theta)),
+                     (np.sin(theta), np.cos(theta))))
+
+
+def get_outliers(data, m=1.6) -> np.array:
+    return np.where(abs(data - np.mean(data)) > m * np.std(data))
+
+
 def points_on_circumference(center: Point2, radius, n=10) -> Set[Point2]:
     """Calculates all points on the circumference of a circle. n = number of points."""
     points = [
