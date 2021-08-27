@@ -3,6 +3,7 @@ import random
 from math import pi
 import numpy as np
 from typing import List, Union, Set, Tuple
+from collections import deque
 
 from loguru import logger
 from sc2.position import Point2
@@ -196,6 +197,19 @@ def find_building_position(matrix: np.ndarray, size: int = 0, min_value: int = 0
     else:
         return None
     return Point2((pos[1] + (size + 1) / 2, pos[0] + (size + 1) / 2))
+
+
+def dfs_numpy(center: tuple, array: np.ndarray) -> np.ndarray:
+    center = int(center[0]), int(center[1])
+    deq = deque([center])
+    polygon_points = np.zeros(array.shape, dtype=bool)
+    while deq:
+        x, y = deq.popleft()
+        if array[y][x]:
+            array[y][x] = False
+            polygon_points[y][x] = True
+            deq.extend([(x+1, y), (x-1, y), (x, y+1), (x, y-1)])
+    return polygon_points
 
 
 # def find_best_position(matrix, size: int = 1):
