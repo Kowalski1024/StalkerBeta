@@ -2,7 +2,7 @@ from .manager_base import ManagerBase
 from BuildOrder.build_task import BuildTask
 from Managers.influence_gird_manager import InfluenceGridManager
 
-import sc2_math
+import sc2math
 from sc2.game_data import Cost
 from sc2.position import Point2
 from sc2.unit import Unit
@@ -112,14 +112,14 @@ class BuildOrderManager(ManagerBase):
                 self.can_afford(UnitTypeId.PYLON)
         ):
             reg = self._map_influence.get_pylon_grid()
-            return build(sc2_math.find_building_position(reg.grid, 2))
+            return build(sc2math.find_building_position(reg.grid, 2))
         return False
 
     # TODO: get to destination before tracking building construction complete
     def build_structure(self, unit_id: UnitTypeId) -> bool:
         if self.can_afford(unit_id):
             reg = self._map_influence.get_building_grid()
-            pos = sc2_math.find_building_position(reg.grid, 3, 9)
+            pos = sc2math.find_building_position(reg.grid, 3, 9)
             if pos is None or not self._bot.can_place_single(unit_id, pos):
                 return False
             worker = self._bot.select_build_worker(pos)

@@ -199,6 +199,19 @@ def find_building_position(matrix: np.ndarray, size: int = 0, min_value: int = 0
     return Point2((pos[1] + (size + 1) / 2, pos[0] + (size + 1) / 2))
 
 
+def vectors_angle(vector_1: Point2, vector_2: Point2):
+    unit_vector_1 = vector_1 / np.linalg.norm(vector_1)
+    unit_vector_2 = vector_2 / np.linalg.norm(vector_2)
+    dot_product = np.dot(unit_vector_1, unit_vector_2)
+    return np.arccos(dot_product)
+
+
+def distance_point2_to_line(p: Point2, line: Tuple[Point2, Point2]):
+    return np.linalg.norm(
+        np.cross(line[0] - line[1], line[1] - p)) / np.linalg.norm(
+        line[1] - line[1])
+
+
 def dfs_numpy(center: tuple, array: np.ndarray) -> np.ndarray:
     center = int(center[0]), int(center[1])
     deq = deque([center])
@@ -206,11 +219,27 @@ def dfs_numpy(center: tuple, array: np.ndarray) -> np.ndarray:
     while deq:
         x, y = deq.popleft()
         if array[y][x]:
+            if array[y][x] == 1:
+                deq.extend([(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)])
             array[y][x] = False
             polygon_points[y][x] = True
-            deq.extend([(x+1, y), (x-1, y), (x, y+1), (x, y-1)])
     return polygon_points
 
+
+def points2_to_indices(points: Set[Tuple[float, float]]) -> Tuple[np.ndarray, np.ndarray]:
+    return np.array([p[1] for p in points]), np.array([p[0] for p in points])
+
+
+def ndarray_corners_points2(array: np.ndarray):
+    def neighbors4(x, y) -> set:
+        return {(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)}
+
+    nonzero = {(x, y) for x, y in zip(*np.nonzero(array))}
+    return {Point2((y, x)) for x, y in nonzero if neighbors4(x, y).difference(nonzero)}
+
+
+def point2_in_grid(point: Point2, grid: np.ndarray) -> bool:
+    return bool(grid[int(point.y)][int(point.x)])
 
 # def find_best_position(matrix, size: int = 1):
 #     """

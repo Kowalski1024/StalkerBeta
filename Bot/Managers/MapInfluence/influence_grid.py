@@ -5,7 +5,7 @@ from sc2.position import Point2
 from copy import copy
 from typing import Union
 import numpy as np
-import sc2_math
+import sc2math
 
 
 class InfluenceGrid:
@@ -50,7 +50,7 @@ class InfluenceGrid:
         return empty
 
     def find_best_position(self, size: int) -> Point2:
-        pos, = sc2_math.find_building_position(self.grid, size=size)
+        pos, = sc2math.find_building_position(self.grid, size=size)
         return Point2((pos[3] + self.shape()[1], pos[1] + self.shape()[0]))
 
     def slice_grid(self, dim: float, center_position):
@@ -87,9 +87,9 @@ class InfluenceGrid:
         :param cycle:
         """
         if cycle:
-            self.grid[sc2_math.points_in_circle_np(radius, position, self.shape())] += weight
+            self.grid[sc2math.points_in_circle_np(radius, position, self.shape())] += weight
         else:
-            self.grid[sc2_math.points_in_square_np(radius, position, self.shape())] += weight
+            self.grid[sc2math.points_in_square_np(radius, position, self.shape())] += weight
 
     def set_weight(self, weight: Union[int, float], position: Union[Point2, tuple], radius: float, cycle: bool = False):
         """
@@ -99,9 +99,9 @@ class InfluenceGrid:
         :param cycle:
         """
         if cycle:
-            self.grid[sc2_math.points_in_circle_np(radius, position, self.shape())] = weight
+            self.grid[sc2math.points_in_circle_np(radius, position, self.shape())] = weight
         else:
-            self.grid[sc2_math.points_in_square_np(radius, position, self.shape())] = weight
+            self.grid[sc2math.points_in_square_np(radius, position, self.shape())] = weight
 
     def shape(self) -> tuple:
         """

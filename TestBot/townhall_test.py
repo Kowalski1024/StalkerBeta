@@ -4,7 +4,7 @@ from sc2.position import Point2, Point3
 from typing import Union, Tuple, Set, Dict
 import matplotlib.pyplot as plt
 from matplotlib.patches import RegularPolygon, Circle, Rectangle
-from sc2_math import Segment, LinearRing
+from sc2math import Segment, LinearRing
 
 
 class Townhall:

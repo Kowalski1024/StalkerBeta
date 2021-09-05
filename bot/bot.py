@@ -10,7 +10,7 @@ from MapAnalyzer.MapData import MapData
 import matplotlib.pyplot as plt
 from MapAnalyzer.constructs import RawChoke
 from collections import deque
-from typing import Union
+from typing import Union, Tuple
 import math
 from itertools import chain
 from more_itertools import pairwise
@@ -33,6 +33,7 @@ class BotBrain(BotAI):
     def __init__(self):
         super().__init__()
         self.iteration = 0
+
         self.units_dict: Dict[int, Unit] = dict()
         self.test_list = list()
         self.chokes = list()
@@ -59,80 +60,15 @@ class BotBrain(BotAI):
 
     async def on_start(self):
         self.client.game_step = 4
-        self.map_data = MapData(self)
+        # self.map_data = MapData(self)
         self.region_manager = RegionManager(self)
-        self.region_manager.draw_polygons()
-        self.draw_ramp_points()
-        # x, y = self.townhalls.first.position
-        # print(_map[int(y)][int(x)]) #191
-        # x, y = self.get_next_expansion()
-        # print(_map[int(y)][int(x)])
-        # self.depth_points(self.townhalls.first)
         print("Game started")
 
-    def print(self):
-        for point in self.test_list:
-            p = Point3((*point, self.townhalls.first.position3d[2]))
-            self.client.debug_sphere_out(p, r=0.5)
-
-    def height_at(self, p: Point2):
-        return self.game_info.terrain_height.data_numpy[p.y][p.x]
-        pass
-
-    def lower(self, points) -> Set[Point2]:
-        current_min = 10000
-        result = set()
-        for p in points:
-            height = self.height_at(p)
-            if height < current_min:
-                print(height)
-                current_min = height
-                result = {p}
-            elif height == current_min:
-                result.add(p)
-        return result
-
-    def draw_ramp_points(self):
-        for ramp in self.game_info.map_ramps:
-            height_points = sorted(list({self.get_terrain_z_height(point) for point in ramp.points}))
-            top_height = height_points[-3]
-            bottom_height = height_points[2]
-            upper = []
-            down = []
-            for p in ramp.points:
-                h = self.get_terrain_z_height(p)
-                pos = Point3((p.x, p.y, h+1))
-                if h == top_height:
-                    upper.append(p)
-                    self.client.debug_box2_out(pos + Point2((0.5, 0.5)), half_vertex_length=0.25,
-                                               color=Point3((0, 255, 0)))
-                elif h == bottom_height:
-                    down.append(p)
-                    self.client.debug_box2_out(pos + Point2((0.5, 0.5)), half_vertex_length=0.25,
-                                               color=Point3((255, 0, 0)))
-            upper_center = Point2.center(upper)
-            down_center = Point2.center(down)
-            pos = Point3((*upper_center, self.get_terrain_z_height(upper_center)+1))
-            self.client.debug_box2_out(pos + Point2((0.5, 0.5)), half_vertex_length=0.25,
-                                       color=Point3((0, 0, 255)))
-            pos = Point3((*down_center, self.get_terrain_z_height(down_center)))
-            self.client.debug_box2_out(pos + Point2((0.5, 0.5)), half_vertex_length=0.25,
-                                       color=Point3((0, 0, 255)))
-
     async def on_step(self, iteration):
+        # self.region_manager.regions.draw_divider_centers()
         self.iteration = iteration
-        # for ramp in self.game_info.map_ramps:
-        #     for point in ramp.points:
-        #         h = self.get_terrain_z_height(point)
-        #         self.client.debug_text_world(text=str(h),
-        #                                      pos=Point3((*point, self.townhalls.first.position3d.z)) + Point2(
-        #                                          (0.5, 0.5)))
-        self.draw_ramp_points()
-        # self.region_manager.draw_chokes()
-        # self.print()
         for unit in self.units:
             self.units_dict[unit.tag] = unit
-        # await self.townhall.speed_mining()
         pass
 
     def on_end(self, result):
@@ -153,10 +89,10 @@ class BotBrain(BotAI):
 def main():
     # BlackburnAIE RomanticideAIE 2000AtmospheresAIE LightshadeAIE JagannathaAIE
     # VeryEasy, Easy, Medium, MediumHard, Hard, Harder, VeryHard, CheatVision, CheatMoney, CheatInsane
-    sc2.run_game(sc2.maps.get("BlackburnAIE"), [
+    sc2.run_game(sc2.maps.get("JagannathaAIE"), [
         Bot(Race.Protoss, BotBrain()),
         Computer(Race.Protoss, Difficulty.VeryEasy),
-    ], realtime=True, disable_fog=True)
+    ], realtime=True, disable_fog=True, random_seed=1)
 
 
 if __name__ == '__main__':

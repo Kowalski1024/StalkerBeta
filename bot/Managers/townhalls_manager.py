@@ -4,7 +4,7 @@ from sc2.units import Units
 from sc2.position import Point2, Point3
 from typing import Set, Dict, Tuple, Union
 from matplotlib.patches import RegularPolygon
-from sc2_math import Segment, LinearRing
+from sc2math import Segment, LinearRing
 
 
 class TownhallsManager(ManagerBase):
