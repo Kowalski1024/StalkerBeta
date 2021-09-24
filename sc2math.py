@@ -4,6 +4,8 @@ from math import pi
 import numpy as np
 from typing import List, Union, Set, Tuple
 from collections import deque
+from itertools import chain
+import scipy.spatial
 
 from loguru import logger
 from sc2.position import Point2
@@ -226,8 +228,12 @@ def dfs_numpy(center: tuple, array: np.ndarray) -> np.ndarray:
     return polygon_points
 
 
-def points2_to_indices(points: Set[Tuple[float, float]]) -> Tuple[np.ndarray, np.ndarray]:
+def points2_to_indices(points: Set[Point2]) -> Tuple[np.ndarray, np.ndarray]:
     return np.array([p[1] for p in points]), np.array([p[0] for p in points])
+
+
+def indices_to_points2(indices) -> Set[Point2]:
+    return {Point2((x, y)) for y, x in zip(*indices)}
 
 
 def ndarray_corners_points2(array: np.ndarray):
@@ -241,13 +247,29 @@ def ndarray_corners_points2(array: np.ndarray):
 def point2_in_grid(point: Point2, grid: np.ndarray) -> bool:
     return bool(grid[int(point.y)][int(point.x)])
 
-# def find_best_position(matrix, size: int = 1):
-#     """
-#     :param matrix:
-#     :param size:
-#     :return:
-#     """
-#     pos = max_square_in_matrix(matrix, size)
-#     if pos is None:
-#         return None
-#     return Point2((pos[3], pos[1]))
+
+# copied from MapAnalyzer
+def closest_towards_point(points: List[Point2], target: Union[Point2, tuple]) -> Point2:
+
+    if not isinstance(points, (list, np.ndarray)):
+        logger.warning(type(points))
+
+    return points[closest_node_idx(node=target, nodes=points)]
+
+
+# copied from MapAnalyzer
+def closest_node_idx(node: Union[Point2, np.ndarray], nodes: Union[List[Tuple[int, int]], np.ndarray]) -> int:
+    """
+    :rtype: int
+
+    Given a list of ``nodes``  and a single ``node`` ,
+
+    will return the index of the closest node in the list to ``node``
+
+    """
+    if isinstance(nodes, list):
+        iter = chain.from_iterable(nodes)
+        nodes = np.fromiter(iter, dtype=type(nodes[0][0]), count=len(nodes) * 2).reshape((-1, 2))
+
+    closest_index = scipy.spatial.distance.cdist([node], nodes, "sqeuclidean").argmin()
+    return closest_index
