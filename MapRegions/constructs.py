@@ -5,8 +5,10 @@ from sc2.game_info import GameInfo
 from sc2.units import Units
 from sc2.cache import property_immutable_cache, property_mutable_cache
 from collections import deque
+
 if TYPE_CHECKING:
     from sc2.bot_ai import BotAI
+
 
 # copied from sc2.cache.py (BurnySC2)
 def _property_cache_once_per_frame(f):
@@ -32,6 +34,40 @@ def _property_cache_once_per_frame(f):
 
     return property(inner)
 
+
+class Passage:
+    def __init__(self, points: Set[Point2], surroundings: Set[Point2], blockers: Units, game_info: 'GameInfo'):
+        self.__game_info = game_info
+        self._points = points
+        self._surroundings = {p for p in surroundings if self._buildable(p)}
+        self._surrounding_groups = list(self.__game_info._find_groups(self._surroundings, 4))
+        self._blockers = blockers
+
+        self.cache = {}
+
+    @property_immutable_cache
+    def _height_map(self):
+        return self.__game_info.terrain_height
+
+    def height_at(self, p: Point2) -> int:
+        return self._height_map[p.rounded]
+
+    def heights(self):
+        return sorted(list({self.height_at(point) for point in self._points}))
+
+    def _passable(self, p: Point2):
+        return self.__game_info.pathing_grid[p] == 1
+
+    def _buildable(self, p: Point2):
+        return self.__game_info.placement_grid[p] == 1
+
+    @property
+    def points(self) -> Set[Point2]:
+        return self._points.copy()
+
+    @property
+    def surrounding_groups(self):
+        return self._surrounding_groups
 
 class Ramp:
     def __init__(self, points: Set[Point2], game_info: 'GameInfo'):

@@ -4,7 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/archive" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.9 (Python 3.9 - Burny SC2)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.9 (SC2-env)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

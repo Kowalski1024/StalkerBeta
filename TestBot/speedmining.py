@@ -8,7 +8,7 @@ from sc2.unit import Unit
 from sc2.units import Units
 from sc2.position import Point2, Point3
 from typing import List, Union, Tuple
-from Managers.townhalls_manager import Townhall
+from Bot.Managers.townhalls_manager import Townhall
 # from bot import BotBrain
 
 

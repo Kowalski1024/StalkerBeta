@@ -2,9 +2,10 @@ import sc2math
 from sc2.position import Point2, Point3
 from sc2.units import Units
 from sc2.unit import Unit
-from typing import TYPE_CHECKING, Union, List, Tuple, Set, Dict, Optional
+from typing import TYPE_CHECKING, Union, List, Tuple, Set, Dict, Optional, DefaultDict
 import numpy as np
 from functools import lru_cache
+from collections import defaultdict
 from scipy.ndimage import center_of_mass
 from sc2.cache import property_immutable_cache, property_mutable_cache
 
@@ -12,43 +13,36 @@ if TYPE_CHECKING:
     from MapRegions import ConnectivitySide
 
 
-class Region:
-    def __init__(self, arr: np.ndarray, expansions: List[Point2], watchtowers: Units):
+class Polygon:
+    def __init__(self, arr: np.ndarray):
         self.cache = {}
-
-        self.array = arr
-        self.indices = np.nonzero(self.array)
-        self.points = sc2math.indices_to_points2(self.indices)
-        self.bases = [
-            base
-            for base in expansions
-            if self.is_inside_point(base)
-        ]
-        self.watchtowers = [
-            tower
-            for tower in watchtowers
-            if self.is_inside_point(tower.position_tuple)
-        ]
         self.label = None
-        self.connectivity_dict: Dict[int, List[ConnectivitySide]] = dict()
 
-    def _update(self, reg: 'Region'):
-        # used in regions calculation when small polygon are merged to neighbours
-        self.array[reg.array] = True
-        self.indices = np.nonzero(self.array)
-        self.points.update(reg.points)
-        self.bases.extend(reg.bases)
-        self.watchtowers.extend(reg.watchtowers)
+        self.ndarray = arr
 
-    # def connect_polygon(self, connect_line: ConnectivityLine, no_exists=False):
-    #     if connect_line.parent != self:
-    #         connect_line.neighbour, connect_line.parent = connect_line.parent, connect_line.neighbour
-    #     if no_exists and connect_line.neighbour in self.connectivity_dict:
-    #         return
-    #     if connect_line.neighbour not in self.connectivity_dict:
-    #         self.connectivity_dict[connect_line.neighbour] = [connect_line]
-    #     else:
-    #         self.connectivity_dict[connect_line.neighbour].append(connect_line)
+    def is_inside_indices(self, point: Union[Point2, tuple]) -> bool:
+        indices = np.nonzero(self.ndarray)
+        if isinstance(point, Point2):
+            point = point.rounded
+        return point[1] in indices[0] and point[0] in indices[1]
+
+    @property
+    def area(self) -> int:
+        indices = np.nonzero(self.ndarray)
+        return len(indices[0])
+
+    def __repr__(self) -> str:
+        return f"Polygon {self.label}"
+
+
+class Region(Polygon):
+    def __init__(self, arr: np.ndarray, expansions: List[Point2], watchtowers: Units):
+        super().__init__(arr)
+        self.indices = np.nonzero(arr)
+        self.points = sc2math.indices_to_points2(self.indices)
+        self.bases = expansions
+        self.watchtowers = watchtowers
+        self.connectivity_dict: DefaultDict[int, List[ConnectivitySide]] = defaultdict(list)
 
     @property
     def has_base(self) -> bool:
@@ -78,7 +72,7 @@ class Region:
 
         """
 
-        cm = sc2math.closest_towards_point(points=list(self.points), target=center_of_mass(self.array))
+        cm = sc2math.closest_towards_point(points=list(self.points), target=center_of_mass(self.ndarray))
         return cm
 
     @lru_cache()
@@ -108,7 +102,7 @@ class Region:
     @property
     @lru_cache()
     def perimeter_as_points2(self) -> Set[Point2]:
-        return sc2math.ndarray_corners_points2(self.array)
+        return sc2math.ndarray_corners_points2(self.ndarray)
 
     @property
     def perimeter_as_indices(self):
@@ -146,6 +140,11 @@ class Region:
         plt.scatter(x, y, s=0.1)
         if self_only:  # pragma: no cover
             plt.grid()
+
+    def plot_region(self):
+        import matplotlib.pyplot as plt
+        plt.matshow(self.ndarray)
+        plt.show()
 
     def __repr__(self) -> str:
         return f"Region {self.label} [size={self.area}, bases={len(self.bases)}]"
