@@ -1,20 +1,14 @@
 from typing import TYPE_CHECKING, Tuple, List, Union, Dict, Set, Optional, DefaultDict
-from dataclasses import dataclass
 
-from sc2.game_info import GameInfo
 from sc2.bot_ai import BotAI
-from sc2.client import Client
 from sc2.units import Units
 from sc2.unit import Unit
 from sc2.position import Point2, Point3
-from sc2.cache import property_immutable_cache, property_mutable_cache
 import sc2math
 import matplotlib.pyplot as plt
 from skimage.draw import line
-from collections import deque, defaultdict
 import numpy as np
 import math
-import random
 
 from MapRegions.Region import Region, Polygon
 from MapRegions.constructs import Blocker, Passage
@@ -42,22 +36,33 @@ class MapRegions:
             self.expansion_locations.append(loc)
 
         # numpy grids
-        self.terrain_height = self._game_info.terrain_height.data_numpy.copy()
         self.placement_grid = self._game_info.placement_grid.data_numpy.copy()
         self.pathing_grid = self._game_info.pathing_grid.data_numpy.copy()
         self.map_shape = self.pathing_grid.shape
 
         self.passages = self._find_passages()
 
-        # self.ramps = self._find_ramps()
-        self.regions: Dict[int, Region] = self.slice_map()
-        self.regions_map = np.zeros(self.map_shape)
-        for reg in self.regions.values():
-            self.regions_map[reg.ndarray] = reg.label
+        self._regions: Dict[int, Region] = self.slice_map()
+        self._regions_map = np.zeros(self.map_shape)
+        for reg in self._regions.values():
+            self._regions_map[reg.ndarray] = reg.label
         self._connect_regions()
-        self.plot_regions()
 
-    def slice_map(self):
+    def region_at(self, pos: Union[Unit, Point2]) -> Region:
+        if isinstance(pos, Unit):
+            pos = pos.position
+        idx = self._regions_map[pos.y, pos.x]
+        return self._regions[idx]
+
+    @property
+    def regions(self) -> Dict[int, Region]:
+        return self._regions
+
+    @property
+    def regions_map(self) -> np.ndarray:
+        return self._regions_map
+
+    def slice_map(self) -> Dict[int, Region]:
         def add_chokes(chokes, map_grid: MapGrid):
             for choke in chokes:
                 x1, y1 = choke[0][1], choke[0][0]
@@ -69,16 +74,15 @@ class MapRegions:
 
         regions = []
         map_center = self._game_info.map_center
-        region_grid = self.region_grid(self.placement_grid, 2, True)
+        region_grid = self.region_grid(MapGrid(self.placement_grid), 2, True)
 
-        region_grid.plot_grid()
-
-        # bases locations
+        # calculate bases locations
         for loc in self.expansion_locations:
             if not (loc == self.bot_start_loc or loc == self.enemy_start_loc):
                 add_chokes(self.find_chokes(loc, distance=24), region_grid)
-            regions.append(Polygon(region_grid.bfs_ndarray(loc, max_value=1, sub=True)))
+            regions.append(Polygon(region_grid.bfs_ndarray(loc, rng=1, sub=True)))
 
+        # side points of ramps, blockers
         side_points = []
         for passage in self.passages:
             groups = passage.surrounding_groups
@@ -87,7 +91,7 @@ class MapRegions:
                 vec1, vec2 = c1.direction_vector(c2).normalized, c2.direction_vector(c1).normalized
                 side_points.extend([6 * vec1 + c2, 6 * vec2 + c1])
 
-        # # sort ramps by distance to reflection point/line
+        # sort side points by distance to reflection point/line
         basses_center = Point2.center([self.bot_start_loc, self.enemy_start_loc])
         if basses_center.is_same_as(map_center, 1):
             side_points = map_center.sort_by_distance(side_points)
@@ -96,16 +100,22 @@ class MapRegions:
                 np.cross(basses_center - map_center, map_center - p)) / np.linalg.norm(
                 basses_center - map_center))
 
+        # calculate side points of ramps and blockers
         for point in side_points:
-            if region_grid.is_inside_point(point):
+            if region_grid.value_at(point):
                 add_chokes(self.find_chokes(point), region_grid)
-                regions.append(Polygon(region_grid.bfs_ndarray(point, max_value=1, sub=True)))
+                regions.append(Polygon(region_grid.bfs_ndarray(point, rng=1, sub=True)))
 
+        # rest points
         for (b, a), value in np.ndenumerate(region_grid.grid):
             p = Point2((a, b))
             if value > 0:
-                regions.append(Polygon(region_grid.bfs_ndarray(p, max_value=2, sub=True)))
+                regions.append(Polygon(region_grid.bfs_ndarray(p, rng=1, sub=True)))
+
+        # connecting smaller regions into bigger
         regions = sorted(self._clean_regions(regions), key=lambda x: self.bot_start_loc.distance_to_point2(x.center))
+
+        # labeling regions
         for idx, reg in enumerate(regions):
             reg.label = idx + 1
         return {reg.label: reg for reg in regions}
@@ -131,12 +141,12 @@ class MapRegions:
 
     def _clean_regions(self, regions: List[Polygon], smallest_area_limit: int = 100) -> List[Region]:
         # preparing the data
-        regions_grid = np.zeros(self.map_shape)
+        regions_grid = MapGrid(np.zeros(self.map_shape))
         regions_dict: Dict[int, Polygon] = dict()
         for idx, reg in enumerate(regions):
             reg.label = idx + 1
-            regions_dict[idx + 1] = reg
-            regions_grid[reg.ndarray] = idx + 1
+            regions_dict[reg.label] = reg
+            regions_grid.include_grid(reg.ndarray, status=reg.label)
 
         # func output
         regs: List[Region] = []
@@ -146,9 +156,14 @@ class MapRegions:
             if reg.area >= smallest_area_limit:
                 continue
             # trying to add regions which are below area limit to their neighbours
-            neighbour_regs = [
-                regions_dict[v] for v in self._region_neighbours_label(reg, regions_grid)
-            ]
+            # neighbour_regs = {
+            #     regions_dict[regions_grid.value_at(p)] for p in
+            #     regions_grid.bfs_points(reg.first_point, rng=reg.label, neighbour8=True)[1]
+            #     if regions_grid.value_at(p)
+            # }
+            neighbour_regs = {
+                regions_dict[v] for v in self._region_neighbours_label(reg, regions_grid.grid)
+            }
 
             # filter if there is neighbour without base and is above size limit
             non_base_regs = {
@@ -162,17 +177,17 @@ class MapRegions:
 
             # search for smallest neighbour (prefer region above area limit)
             # leave region if there isn't neighbour without base and himself is big enough
-            if not (neighbour_regs is None or reg.area >= smallest_area_limit / 2):
+            if neighbour_regs is not None and reg.area < smallest_area_limit // 2:
                 smallest_reg: Polygon = min([reg for reg in neighbour_regs if reg.area >= smallest_area_limit],
                                             key=lambda x: x.area, default=None)
                 if not smallest_reg:
-                    smallest_reg: Polygon = max([reg for reg in neighbour_regs if reg.area >= smallest_area_limit],
+                    smallest_reg: Polygon = max([reg for reg in neighbour_regs if reg.area < smallest_area_limit],
                                                 key=lambda x: x.area, default=None)
                 if smallest_reg:
                     # add reg data to found smallest neighbour
                     regions_dict.pop(reg.label)
                     regions_dict[smallest_reg.label].ndarray[reg.ndarray] = True
-                    regions_grid[reg.ndarray] = smallest_reg.label
+                    regions_grid.grid[reg.ndarray] = smallest_reg.label
 
         for key, item in regions_dict.items():
             ndarray = np.zeros(self.map_shape, dtype=bool)
@@ -185,26 +200,47 @@ class MapRegions:
     def _connect_regions(self):
         # creating a perimeter grid of all regions
         regions_perimeter_grid = np.zeros(self.map_shape, dtype=np.uint8)
-        for val, reg in self.regions.items():
+        for val, reg in self._regions.items():
             regions_perimeter_grid[reg.perimeter_as_indices] = val
+        regions_perimeter_grid = regions_perimeter_grid.T
 
         for w, group in enumerate(self.passages):
             surrounding_groups = group.surrounding_groups
             if len(surrounding_groups) == 2:
-                first_side = [0]*len(self.regions)
-                second_side = [0]*len(self.regions)
+                first_side = [0] * len(self._regions)
+                second_side = [0] * len(self._regions)
                 for p in surrounding_groups[0]:
-                    val = int(self.regions_map[p.y, p.x])
-                    first_side[val-1] = first_side[val-1]+1
+                    val = int(self._regions_map[p.y, p.x])
+                    first_side[val - 1] = first_side[val - 1] + 1
                 for p in surrounding_groups[1]:
-                    val = int(self.regions_map[p.y, p.x])
-                    second_side[val-1] = second_side[val - 1] + 1
+                    val = int(self._regions_map[p.y, p.x])
+                    second_side[val - 1] = second_side[val - 1] + 1
                 for idx1, l1 in enumerate(first_side):
                     for idx2, l2 in enumerate(second_side):
-                        if l1 >= len(surrounding_groups[0])*0.4 and l2 >= len(surrounding_groups[1])*0.4:
-                            print(w)
-                            self.add_connectivity(self.regions[idx1+1], self.regions[idx2+1], surrounding_groups[0],
+                        if l1 >= len(surrounding_groups[0]) * 0.4 and l2 >= len(surrounding_groups[1]) * 0.4:
+                            self.add_connectivity(self._regions[idx1 + 1], self._regions[idx2 + 1], surrounding_groups[0],
                                                   surrounding_groups[1], False, False)
+
+        for val, reg in self._regions.items():
+            d: Dict[int, set] = {v: set() for v in self._regions.keys()}
+            to_del = set()
+            for p in reg.perimeter_as_points2:
+                for n in p.neighbors4:
+                    v = regions_perimeter_grid[n]
+                    if v and v != val:
+                        d[v].update({n, p})
+                        to_del.add(n)
+                        regions_perimeter_grid[p] = 0
+            for p in to_del:
+                regions_perimeter_grid[p] = 0
+            for v, s in d.items():
+                if s:
+                    groups = self._game_info._find_groups(s, 4)
+                    for group in groups:
+                        neighbour = self._regions[v]
+                        g1 = {p for p in group if reg.is_inside_point(p)}
+                        g2 = {p for p in group if neighbour.is_inside_point(p)}
+                        self.add_connectivity(reg, neighbour, g1, g2, False, False)
 
     def add_connectivity(self, reg_a: Region, reg_b: Region,
                          points_a: Set[Point2], points_b: Set[Point2],
@@ -220,8 +256,7 @@ class MapRegions:
         add(reg_a, connect_a)
         add(reg_b, connect_b)
 
-    def region_grid(self, grid: np.ndarray, val: int, rich=False) -> MapGrid:
-        map_grid = MapGrid(grid)
+    def region_grid(self, map_grid: MapGrid, val: int, rich=False) -> MapGrid:
 
         # destructables
         map_grid.include_destructables(self.destructables, False)
@@ -241,12 +276,6 @@ class MapRegions:
         map_grid = MapGrid(self.pathing_grid)
         map_grid.include_destructables(self.destructables | self.mineral_blockers, True)
         return map_grid.grid
-
-    @property_mutable_cache
-    def choke_grid(self) -> np.ndarray:
-        grid = self.pathing_grid.copy()
-        grid[np.nonzero(self.placement_grid)] = True
-        return self.region_grid(grid, 0).grid
 
     def _find_passages(self) -> List[Passage]:
         pathing_map = MapGrid(self.pathing_grid)
@@ -268,43 +297,10 @@ class MapRegions:
 
         return passages
 
-    # def _find_ramps(self):
-    #     def height_levels(_p):
-    #         return sorted(list({self.get_terrain_z_height(x) for x in _p}))
-    #
-    #     from MapAnalyzer.utils import change_destructable_status_in_grid
-    #
-    #     heights = {self.get_numpy_terrain_height(p) for p in self.expansion_locations}
-    #     _min, _max = min(heights), max(heights)
-    #     map_area = self._game_info.playable_area
-    #
-    #     grid = self.pathing_grid.copy()
-    #
-    #     # destructables
-    #     constructs_grid = np.zeros(self.map_shape, dtype=bool).T
-    #     for unit in self.destructables | self.mineral_blockers:
-    #         change_destructable_status_in_grid(constructs_grid, unit, status=True)
-    #     grid[constructs_grid.T] = True
-    #
-    #     points = {
-    #         Point2((a, b))
-    #         for (b, a), value in np.ndenumerate(grid)
-    #         if (
-    #                 value == 1
-    #                 and map_area.x <= a < map_area.x + map_area.width
-    #                 and map_area.y <= b < map_area.y + map_area.height
-    #                 and _min < self.terrain_height[b, a] < _max
-    #                 and self.terrain_height[b, a] not in heights
-    #         )
-    #     }
-    #     grid[np.nonzero(self.placement_grid)] = False
-    #     points_groups = [group for group in self._game_info._find_groups(points) if len(height_levels(group)) >= 4]
-    #     return [Ramp(self.bfs_array_to_points2(list(group)[0], grid), self._game_info)
-    #             for group in points_groups
-    #             ]
-
     def depth_points(self, center: Point2, dis, degrees_step) -> List[Point2]:
-        grid = self.choke_grid.T
+        grid = MapGrid(self.pathing_grid)
+        grid.include_grid(self.placement_grid, True)
+        grid = self.region_grid(grid, 0).grid.T
         vec = center.direction_vector(self._game_info.map_center).normalized
         vec_arr = np.array([[vec.x], [vec.y]])
         point_list = []
@@ -389,48 +385,16 @@ class MapRegions:
         # self.plot_depth(ps, graph, chokes, center)
         return chokes
 
-    @staticmethod
-    def bfs_array_to_points2(p: Point2, array: np.ndarray) -> Set[Point2]:
-        s = set()
-        p = p.rounded
-        deq = deque([(p.x, p.y)])
-        while deq:
-            x, y = deq.popleft()
-            if array[y, x]:
-                p = Point2((x, y))
-                s.add(p)
-                deq.extend(p.neighbors8)
-                array[y, x] = False
-        return s
-
-    @staticmethod
-    def bfs_region(center: Point2, array: np.ndarray) -> np.ndarray:
-        center = center.rounded
-        deq = deque([(center.x, center.y)])
-        region_points = np.zeros(array.shape, dtype=bool)
-        while deq:
-            x, y = deq.popleft()
-            if array[y, x]:
-                if array[y, x] == 1:
-                    deq.extend(Point2((x, y)).neighbors4)
-                array[y, x] = False
-                region_points[y, x] = True
-        return region_points
-
-    def get_numpy_terrain_height(self, p: Point2):
-        x, y = p.rounded
-        return self.terrain_height[x, y]
-
     def plot_regions(self):
         placement = np.zeros(self.map_shape)
-        for val, reg in self.regions.items():
+        for val, reg in self._regions.items():
             placement[reg.ndarray] = val
         plt.matshow(placement)
         plt.show()
 
     def draw_connectivity_lines(self, include_points=False):
         visited: Set[Region] = set()
-        for reg in self.regions.values():
+        for reg in self._regions.values():
             if reg not in visited:
                 visited.add(reg)
                 for neighbour, connects in reg.connectivity_dict.items():
@@ -454,7 +418,7 @@ class MapRegions:
                             self._client.debug_line_out(p1, p2)
 
     def draw_regions_perimeter(self, up: float = 0.25):
-        for reg in self.regions.values():
+        for reg in self._regions.values():
             color = (0, 255, 0)
             for p in reg.perimeter_as_points2:
                 h = self.get_terrain_z_height(p)

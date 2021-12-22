@@ -12,9 +12,9 @@ class MapGrid:
     def __init__(self, grid: np.ndarray):
         self._grid: np.ndarray = grid.copy()
 
-    def is_inside_point(self, point: Point2) -> bool:
+    def value_at(self, point: Point2):
         point = point.rounded
-        return self._grid[point.y, point.x] != 0
+        return self._grid[point.y, point.x]
 
     @property
     def grid(self):
@@ -35,7 +35,7 @@ class MapGrid:
 
     def bfs_points(self,
                    point: Point2,
-                   max_value: int = 0,
+                   rng: Union[tuple, int] = 1,
                    sub: bool = False,
                    neighbour8: bool = False
                    ) -> Tuple[Set[Point2], Set[Point2]]:
@@ -44,12 +44,17 @@ class MapGrid:
         surroundings = set()
         deq = [point.rounded]
 
+        if isinstance(rng, int):
+            rng = (rng, rng)
+
         while deq:
             p = deq.pop(0)
+            if p in points:
+                continue
             val = self._grid[p.y, p.x]
             if val:
                 points.add(p)
-                if max_value == 0 or val <= max_value:
+                if rng[0] <= val <= rng[1]:
                     deq.extend(p.neighbors8) if neighbour8 else deq.extend(p.neighbors4)
                 if sub:
                     self._grid[p.y, p.x] = False
@@ -57,16 +62,21 @@ class MapGrid:
                 surroundings.add(p)
         return points, surroundings.difference(points)
 
-    def bfs_ndarray(self, point: Point2, max_value: int = 0, sub: bool = False) -> np.ndarray:
+    def bfs_ndarray(self, point: Point2, rng: Union[tuple, int] = 1, sub: bool = False) -> np.ndarray:
         grid = np.zeros(self._grid.shape, dtype=bool)
         deq = [point.rounded]
-
+        if isinstance(rng, int):
+            rng = (rng, rng)
+        points = set()
         while deq:
             p = deq.pop(0)
+            if p in points:
+                continue
             val = self._grid[p.y, p.x]
             if val:
+                points.add(p)
                 grid[p.y, p.x] = True
-                if max_value == 0 or val <= max_value:
+                if rng[0] <= val <= rng[1]:
                     deq.extend(p.neighbors4)
                 if sub:
                     self._grid[p.y, p.x] = False

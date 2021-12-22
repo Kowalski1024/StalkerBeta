@@ -27,6 +27,11 @@ class Polygon:
         return point[1] in indices[0] and point[0] in indices[1]
 
     @property
+    def first_point(self):
+        indices = np.nonzero(self.ndarray)
+        return Point2((indices[1][0], indices[0][0]))
+
+    @property
     def area(self) -> int:
         indices = np.nonzero(self.ndarray)
         return len(indices[0])
