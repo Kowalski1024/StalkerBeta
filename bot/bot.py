@@ -15,10 +15,16 @@ import math
 from itertools import chain
 from more_itertools import pairwise
 from MapAnalyzer.constructs import MDRamp
+from Bot.Managers.MapInfluence.grid_types import GridTypes
+from InfluenceGrid import GridData
+from MapRegions import MapRegions
+import time
 
 from Managers.townhalls_manager import Townhall
 from Managers.influence_gird_manager import InfluenceGridManager
 from Managers.region_manager import RegionManager
+from Managers.build_order_manager import BuildOrderManager
+from Managers.BuildOrder.Wallin import WallBuilder
 
 from MapRegions import ConnectivitySide
 
@@ -29,8 +35,9 @@ DATA_PATH = "Data/"
 class BotBrain(BotAI):
     map_data: MapData
     townhall: Townhall
-    influence_manager: InfluenceGridManager
-    region_manager: RegionManager
+    region_data: MapRegions
+    grid_data: GridData
+    builder_manager: BuildOrderManager
 
     def __init__(self):
         super().__init__()
@@ -38,7 +45,6 @@ class BotBrain(BotAI):
 
         self.units_dict: Dict[int, Unit] = dict()
         self.test_list = list()
-        self.chokes = list()
 
     async def on_unit_destroyed(self, unit_tag):
         pass
@@ -62,36 +68,41 @@ class BotBrain(BotAI):
 
     async def on_start(self):
         self.client.game_step = 4
-        self.region_manager = RegionManager(self)
+        self.region_data = MapRegions(self)
+        self.grid_data = GridData(self, self.region_data)
+        self.builder_manager = BuildOrderManager(self, self.grid_data)
+        self.builder_manager.on_create()
+        for conn in self.region_data.regions[2].connectivity_dict.values():
+            for c in conn:
+                wall = WallBuilder(c.points, self.game_info)
+                x = wall.wall_search([3, 1, 3, 2, 3])
+                print(x)
+                self.test_list.extend(x)
+
         print("Game started")
 
     async def on_step(self, iteration):
+        for p, r in self.test_list:
+            if r == 2:
+                p += Point2((0.5, 0.5))
+            h = self.get_terrain_z_height(p)
+            self.client.debug_sphere_out(Point3((p[0]-1.5, p[1]-1.5, h+0.1)), r/2)
+        # await self.builder_manager.update()
         self.iteration = iteration
-        self.region_manager.regions.draw_connectivity_lines()
+        self.region_data.draw_connectivity_lines(include_points=True)
         for unit in self.units:
             self.units_dict[unit.tag] = unit
-        pass
+        # await self.builder_manager.post_update()
 
     def on_end(self, result):
         print("Game ended.", result)
 
 
-# def save_obj(obj, filename):
-#     with open(filename, 'wb') as outp:  # Overwrites any existing file.
-#         pickle.dump(obj, outp, pickle.HIGHEST_PROTOCOL)
-#
-#
-# def open_obj(filename):
-#     with open(filename, 'rb') as file:
-#         obj = pickle.load(file)
-#     return obj
-
-
 def main():
     # BlackburnAIE RomanticideAIE 2000AtmospheresAIE LightshadeAIE JagannathaAIE
-    # EternalEmpire506
+    # GlitteringAshesAIE, HardwireAIE, CuriousMindsAIE, BerlingradAIE
     # VeryEasy, Easy, Medium, MediumHard, Hard, Harder, VeryHard, CheatVision, CheatMoney, CheatInsane
-    sc2.run_game(sc2.maps.get("RomanticideAIE"), [
+    sc2.run_game(sc2.maps.get("LightshadeAIE"), [
         Bot(Race.Protoss, BotBrain()),
         Computer(Race.Protoss, Difficulty.VeryEasy),
     ], realtime=True, disable_fog=True, random_seed=2)

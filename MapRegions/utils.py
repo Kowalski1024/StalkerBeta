@@ -4,6 +4,17 @@ from .destructibles import *
 from sc2.unit import Unit
 
 
+def rotation_matrix(degrees):
+    theta = np.radians(degrees)
+
+    return np.array(((np.cos(theta), -np.sin(theta)),
+                     (np.sin(theta), np.cos(theta))))
+
+
+def get_outliers(data, m=1.6) -> np.array:
+    return np.where(abs(data - np.mean(data)) > m * np.std(data))
+
+
 # from MapAnalyzer
 def change_destructable_status_in_grid(grid: np.ndarray, unit: Unit, status: int):
     """

@@ -4,7 +4,6 @@ from sc2.bot_ai import BotAI
 from sc2.units import Units
 from sc2.unit import Unit
 from sc2.position import Point2, Point3
-import sc2math
 import matplotlib.pyplot as plt
 from skimage.draw import line
 import numpy as np
@@ -14,6 +13,7 @@ from MapRegions.Region import Region, Polygon
 from MapRegions.constructs import Blocker, Passage
 from MapRegions.connectivity import ConnectivitySide
 from MapRegions.MapGrid import MapGrid
+from MapRegions.utils import rotation_matrix, get_outliers
 
 
 class MapRegions:
@@ -225,7 +225,7 @@ class MapRegions:
             d: Dict[int, set] = {v: set() for v in self._regions.keys()}
             to_del = set()
             for p in reg.perimeter_as_points2:
-                for n in p.neighbors4:
+                for n in p.neighbors8:
                     v = regions_perimeter_grid[n]
                     if v and v != val:
                         d[v].update({n, p})
@@ -305,7 +305,7 @@ class MapRegions:
         vec_arr = np.array([[vec.x], [vec.y]])
         point_list = []
         for deg in range(0, 360, degrees_step):
-            x, y = np.matmul(sc2math.rotation_matrix(deg), vec_arr).round(5)
+            x, y = np.matmul(rotation_matrix(deg), vec_arr).round(5)
             x, y = x[0], y[0]
             for m in range(1, dis):
                 x_pos, y_pos = int(y * m + center.x), int(x * m + center.y)
@@ -318,7 +318,7 @@ class MapRegions:
 
         # clean list from outliers
         distance = [math.hypot(p[0] - center.x, p[1] - center.y) for p in point_list]
-        data = sc2math.get_outliers(np.array(distance))[0]
+        data = get_outliers(np.array(distance))[0]
         data = {i for i in data if distance[i] > np.mean(np.array(distance))}
         return [Point2(i) for j, i in enumerate(point_list) if j not in data]
 
@@ -402,11 +402,11 @@ class MapRegions:
                         for connect in connects:
                             if include_points:
                                 for p in connect.points:
-                                    h = self.get_terrain_z_height(p) + 0.3
-                                    self._client.debug_box2_out(Point3((*p, h)) + Point2((0.5, 0.5)), 0.25, (255, 0, 0))
+                                    h = self.get_terrain_z_height(p) - 0.3
+                                    self._client.debug_box2_out(Point3((*p, h)) + Point2((0.5, 0.5)), 0.4, (255, 0, 0))
                                 for p in connect.neighbour_side.points:
-                                    h = self.get_terrain_z_height(p) + 0.3
-                                    self._client.debug_box2_out(Point3((*p, h)) + Point2((0.5, 0.5)), 0.25, (0, 0, 255))
+                                    h = self.get_terrain_z_height(p) - 0.3
+                                    self._client.debug_box2_out(Point3((*p, h)) + Point2((0.5, 0.5)), 0.4, (0, 0, 255))
                             p1 = connect.center
                             p2 = connect.neighbour_side.center
                             h1 = self.get_terrain_z_height(p1) + 0.3
