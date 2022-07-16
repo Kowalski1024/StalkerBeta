@@ -1,3 +1,4 @@
+from typing import List
 import numpy as np
 from scipy.signal import convolve2d
 from sc2.position import Point2
@@ -14,8 +15,12 @@ class BasicGrid:
             if base_val:
                 self.ndarray[self.ndarray == 0] = base_val
 
-    def __add__(self, other: 'BasicGrid'):
+    def __add__(self, other):
         ndarray = self.ndarray + other.ndarray
+        return BasicGrid(self.shape, ndarray=ndarray)
+
+    def __sub__(self, other):
+        ndarray = self.ndarray - other.ndarray
         return BasicGrid(self.shape, ndarray=ndarray)
 
     def __mul__(self, other):
@@ -33,6 +38,10 @@ class BasicGrid:
 
     def argmax(self) -> Point2:
         return Point2(np.unravel_index(np.argmax(self.ndarray), self.shape))
+
+    def argsmax(self, k) -> List[Point2]:
+        max_ = np.max(self.ndarray)
+        return [Point2(p) for p in np.argwhere(self.ndarray == max_)][:k]
 
     def set_polygon(self, val, poly: np.ndarray):
         if poly.shape == self.shape:

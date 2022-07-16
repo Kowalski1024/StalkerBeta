@@ -11,18 +11,17 @@ from MapAnalyzer.MapData import MapData
 import timeit
 
 
-
 class InfluenceGridManager(ManagerBase):
     def __init__(self, bot):
         super().__init__()
         self._bot = bot
         self._map_shape = tuple
-        self.grid_dict: Dict[GridTypes, InfluenceGrid] = dict()
+        self.grid_dict = dict()
 
     def __getitem__(self, i: GridTypes):
         return self.grid_dict[i]
 
-    def on_create(self, map_data: MapData):
+    def on_create(self):
         shape = self._bot.game_info.map_size
         self._map_shape = (shape[1], shape[0])
 
@@ -33,14 +32,14 @@ class InfluenceGridManager(ManagerBase):
         self.grid_dict[GridTypes.Natural] = NaturalGrid(self._map_shape)
 
         # advanced grids
-        self.grid_dict[GridTypes.Pylons] = PylonsGrid(self._map_shape)
+        self.grid_dict[1] = PylonsGrid(self._map_shape)
         self.grid_dict[GridTypes.Structures] = StructuresGrid(self._map_shape)
 
         self.grid_dict[GridTypes.Placement].on_create(self._bot)
         self.grid_dict[GridTypes.Buildings].on_create(self._bot)
         self.grid_dict[GridTypes.Natural].on_create(self._bot)
 
-        self.grid_dict[GridTypes.Pylons].on_create(self._bot, map_data)
+        self.grid_dict[1].on_create(self._bot)
         self.grid_dict[GridTypes.Structures].on_create(self._bot)
 
     async def update(self):
@@ -65,7 +64,7 @@ class InfluenceGridManager(ManagerBase):
         pass
 
     def get_pylon_grid(self) -> InfluenceGrid:
-        output_grid = (self.grid_dict[GridTypes.Pylons] + self.grid_dict[GridTypes.Placement] - self.grid_dict[
+        output_grid = (self.grid_dict[1] + self.grid_dict[GridTypes.Placement] - self.grid_dict[
             GridTypes.Power]) & self.grid_dict[GridTypes.Buildings] & self.grid_dict[
                           GridTypes.Natural]
         # town_halls without pylon
