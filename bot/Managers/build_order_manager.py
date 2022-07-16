@@ -1,6 +1,6 @@
 from .manager_base import ManagerBase
-from BuildOrder.build_task import BuildTask
-from Managers.influence_gird_manager import InfluenceGridManager
+from .BuildOrder.build_task import BuildTask
+from InfluenceGrid import GridData
 
 import sc2math
 from sc2.game_data import Cost
@@ -15,7 +15,7 @@ from typing import Union, List, Dict
 class BuildOrderManager(ManagerBase):
     MAX_WORKERS = 80
 
-    def __init__(self, bot, map_influence: InfluenceGridManager):
+    def __init__(self, bot, map_influence: GridData):
         super().__init__()
         self._bot = bot
         self._map_influence = map_influence
@@ -26,6 +26,7 @@ class BuildOrderManager(ManagerBase):
     def on_create(self):
         self.add_task(unit_id=UnitTypeId.PROBE, priority=1, claim_resources=False)
         self.add_task(unit_id=UnitTypeId.PYLON, priority=3)
+        self.add_task(unit_id=UnitTypeId.GATEWAY, priority=4)
         pass
 
     async def update(self):
@@ -111,15 +112,14 @@ class BuildOrderManager(ManagerBase):
         if (
                 self.can_afford(UnitTypeId.PYLON)
         ):
-            reg = self._map_influence.get_pylon_grid()
-            return build(sc2math.find_building_position(reg.grid, 2))
+            pos = self._map_influence.pylon_grid([2, 3], 1).convolve(2).argmax()
+            return build(pos)
         return False
 
     # TODO: get to destination before tracking building construction complete
     def build_structure(self, unit_id: UnitTypeId) -> bool:
         if self.can_afford(unit_id):
-            reg = self._map_influence.get_building_grid()
-            pos = sc2math.find_building_position(reg.grid, 3, 9)
+            pos = self._map_influence.structure_grid([2, 3], 1).convolve(3).argmax()
             if pos is None or not self._bot.can_place_single(unit_id, pos):
                 return False
             worker = self._bot.select_build_worker(pos)

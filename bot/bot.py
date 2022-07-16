@@ -84,7 +84,7 @@ class BotBrain(BotAI):
     async def on_step(self, iteration):
         for p, r in self.test_list:
             if r == 2:
-                p += Point2((0.5, 0.5))
+                p += Point2((-0.5, -0.5))
             h = self.get_terrain_z_height(p)
             self.client.debug_sphere_out(Point3((p[0]-1.5, p[1]-1.5, h+0.1)), r/2)
         # await self.builder_manager.update()
@@ -102,7 +102,7 @@ def main():
     # BlackburnAIE RomanticideAIE 2000AtmospheresAIE LightshadeAIE JagannathaAIE
     # GlitteringAshesAIE, HardwireAIE, CuriousMindsAIE, BerlingradAIE
     # VeryEasy, Easy, Medium, MediumHard, Hard, Harder, VeryHard, CheatVision, CheatMoney, CheatInsane
-    sc2.run_game(sc2.maps.get("LightshadeAIE"), [
+    sc2.run_game(sc2.maps.get("JagannathaAIE"), [
         Bot(Race.Protoss, BotBrain()),
         Computer(Race.Protoss, Difficulty.VeryEasy),
     ], realtime=True, disable_fog=True, random_seed=2)
